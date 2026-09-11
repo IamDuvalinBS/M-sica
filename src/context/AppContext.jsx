@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { saveAudioBlob, getAudioObjectUrl } from '../utils/audioStore';
+import { saveAudioBlob, getAudioObjectUrl, deleteAudioBlob } from '../utils/audioStore';
 
 const AppContext = createContext(null);
 const ADMIN_EMAILS = ['admin@tuapp.com'];
@@ -97,10 +97,15 @@ export function AppProvider({ children }) {
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'rejected' } : s)));
   }
 
+  function deleteSong(id) {
+    setSongs((prev) => prev.filter((s) => s.id !== id));
+    deleteAudioBlob(id).catch(() => {});
+  }
+
   const value = {
     user, isAdmin, songs, history,
     recordPlay, loginWithGoogle, logout,
-    uploadSong, approveSong, rejectSong,
+    uploadSong, approveSong, rejectSong, deleteSong,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -110,4 +115,4 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp debe usarse dentro de <AppProvider>');
   return ctx;
-}
+             }
