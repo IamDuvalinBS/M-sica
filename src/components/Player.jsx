@@ -17,7 +17,9 @@ export default function Player({ song }) {
   const barsRef = useRef([]);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
-  const sourceRef = useRef(null);
+  const bassRef = useRef(null);
+  const midRef = useRef(null);
+  const trebleRef = useRef(null);
   const rafRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -25,7 +27,9 @@ export default function Player({ song }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showModeMenu, setShowModeMenu] = useState(false);
+  const [showEq, setShowEq] = useState(false);
   const [mode, setMode] = useState('original');
+  const [eq, setEq] = useState({ bass: 0, mid: 0, treble: 0 });
 
   useEffect(() => {
     if (!song) return;
@@ -49,18 +53,46 @@ export default function Player({ song }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
-  function setupAnalyser() {
+  function setupAudioGraph() {
     if (audioCtxRef.current) return;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const ctx = new AudioContext();
     const source = ctx.createMediaElementSource(audioRef.current);
+
+    const bass = ctx.createBiquadFilter();
+    bass.type = 'lowshelf';
+    bass.frequency.value = 200;
+
+    const mid = ctx.createBiquadFilter();
+    mid.type = 'peaking';
+    mid.frequency.value = 1000;
+    mid.Q.value = 0.8;
+
+    const treble = ctx.createBiquadFilter();
+    treble.type = 'highshelf';
+    treble.frequency.value = 4000;
+
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 64;
-    source.connect(analyser);
+
+    source.connect(bass);
+    bass.connect(mid);
+    mid.connect(treble);
+    treble.connect(analyser);
     analyser.connect(ctx.destination);
+
     audioCtxRef.current = ctx;
     analyserRef.current = analyser;
-    sourceRef.current = source;
+    bassRef.current = bass;
+    midRef.current = mid;
+    trebleRef.current = treble;
+  }
+
+  function handleEqChange(band, value) {
+    const val = Number(value);
+    setEq((prev) => ({ ...prev, [band]: val }));
+    const node = band === 'bass' ? bassRef.current : band === 'mid' ? midRef.current : trebleRef.current;
+    if (node) node.gain.value = val;
   }
 
   function drawFrame() {
@@ -76,7 +108,7 @@ export default function Player({ song }) {
   }
 
   function togglePlay() {
-    setupAnalyser();
+    setupAudioGraph();
     if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
 
     if (isPlaying) {
@@ -128,26 +160,38 @@ export default function Player({ song }) {
       </button>
 
       {expanded && (
-        <div className="full-player" style={{ background: `linear-gradient(180deg, ${songGradient(song.id).match(/#[0-9A-Fa-f]{6}/)[0]}33, var(--bg) 60%)` }}>
+        <div className="full-player">
           <div className="full-player-topbar">
             <button className="full-player-close" onClick={() => setExpanded(false)}>⌄</button>
-            <button className="full-player-mode-btn" onClick={() => setShowModeMenu((v) => !v)}>Modo ▾</button>
+            <div className="full-player-topbar-actions">
+              <button className="full-player-mode-btn" onClick={() => { setShowEq((v) => !v); setShowModeMenu(false); }}>EQ</button>
+              <button className="full-player-mode-btn" onClick={() => { setShowModeMenu((v) => !v); setShowEq(false); }}>Modo ▾</button>
+            </div>
           </div>
 
           {showModeMenu && (
             <div className="mode-menu">
-              <button
-                className={mode === 'original' ? 'mode-item active' : 'mode-item'}
-                onClick={() => { setMode('original'); setShowModeMenu(false); }}
-              >
+              <button className={mode === 'original' ? 'mode-item active' : 'mode-item'} onClick={() => { setMode('original'); setShowModeMenu(false); }}>
                 Original
               </button>
-              <button className="mode-item disabled" disabled>
-                Instrumental (próximamente — requiere IA de separación)
-              </button>
-              <button className="mode-item disabled" disabled>
-                Solo voz (próximamente — requiere IA de separación)
-              </button>
+              <button className="mode-item disabled" disabled>Instrumental (próximamente — requiere IA de separación)</button>
+              <button className="mode-item disabled" disabled>Solo voz (próximamente — requiere IA de separación)</button>
+            </div>
+          )}
+
+          {showEq && (
+            <div className="eq-panel">
+              {[['bass', 'Graves'], ['mid', 'Medios'], ['treble', 'Agudos']].map(([key, label]) => (
+                <div key={key} className="eq-row">
+                  <span className="eq-label">{label}</span>
+                  <input
+                    type="range" min={-15} max={15} step={1}
+                    value={eq[key]}
+                    onChange={(e) => handleEqChange(key, e.target.value)}
+                  />
+                  <span className="eq-value">{eq[key] > 0 ? `+${eq[key]}` : eq[key]} dB</span>
+                </div>
+              ))}
             </div>
           )}
 
