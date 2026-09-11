@@ -21,12 +21,14 @@ function Shell() {
 
   return (
     <div className="app-shell">
-      <Navbar />
+      <Navbar setView={setView} />
       <main className="app-content">
         {view === 'feed' && <PublicFeed onPlay={setNowPlaying} />}
         {view === 'history' && <HistoryView />}
         {view === 'upload' && <UploadForm />}
         {view === 'admin' && <AdminReviewQueue />}
+        {view === 'stats' && <StatsView />}
+        {view === 'settings' && <SettingsView />}
       </main>
       <Player song={nowPlaying} />
       <BottomNav view={view} setView={setView} />
