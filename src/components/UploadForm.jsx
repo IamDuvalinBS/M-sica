@@ -95,7 +95,7 @@ if (formularioMusica) {
                 body: JSON.stringify({
                     urlPlaylist: urlDeYoutube,
                     artista: nombreDelArtista,
-                    contrasena: "AQUÍ_PON_LA_CONTRASEÑA_QUE_ELEGISTE_EN_RENDER" // 👈 Pon tu clave de Render aquí
+                    contrasena: "ByDuva" // 👈 Pon tu clave de Render aquí
                 })
             });
 
