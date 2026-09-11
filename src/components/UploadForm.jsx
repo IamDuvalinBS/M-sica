@@ -72,3 +72,44 @@ export default function UploadForm() {
     </div>
   );
 }
+// ====== Código para controlar tu formulario de subida ======
+
+const formularioMusica = document.querySelector('.upload-form');
+
+if (formularioMusica) {
+    formularioMusica.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // 1️⃣ Capturamos lo que escribes en la pantalla de tu celular
+        // (Asegúrate de que en tu HTML los <input> tengan id="url-input" e id="artista-input")
+        const urlDeYoutube = document.querySelector('#url-input').value;
+        const nombreDelArtista = document.querySelector('#artista-input').value;
+
+        // 2️⃣ Mandamos los datos a tu servidor de Render
+        try {
+            const respuesta = await fetch('https://onrender.com', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    urlPlaylist: urlDeYoutube,
+                    artista: nombreDelArtista,
+                    contrasena: "AQUÍ_PON_LA_CONTRASEÑA_QUE_ELEGISTE_EN_RENDER" // 👈 Pon tu clave de Render aquí
+                })
+            });
+
+            const data = await respuesta.json();
+            
+            // 3️⃣ Te muestra una alerta en el teléfono avisando que ya empezó en la nube
+            alert(data.mensaje); 
+            
+            // Limpiamos el formulario para que puedas meter otro link si quieres
+            formularioMusica.reset();
+            
+        } catch (error) {
+            console.error("Error al conectar con el motor:", error);
+            alert("Hubo un error al conectar con tu motor de Render.");
+        }
+    });
+          }
