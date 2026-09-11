@@ -167,3 +167,17 @@ h1, h2 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0 0 12px; }
 .bottom-nav-item.active { color: var(--accent); }
 .bottom-nav-icon { font-size: 1.2rem; }
 .bottom-nav-label { font-size: 0.68rem; }
+.song-cover { background: none; }
+
+.full-player { transition: background 0.4s ease; }
+.full-player-topbar { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 400px; margin-bottom: 12px; }
+.full-player-close { background: none; border: none; color: var(--text-muted); font-size: 1.3rem; padding: 8px; }
+.full-player-mode-btn { background: var(--surface-hover); border: none; color: var(--text); border-radius: 16px; padding: 8px 14px; font-size: 0.85rem; }
+
+.mode-menu { width: 100%; max-width: 340px; background: var(--surface); border-radius: 12px; padding: 8px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.mode-item { background: none; border: none; color: var(--text); text-align: left; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; }
+.mode-item.active { background: var(--surface-hover); color: var(--accent); }
+.mode-item.disabled { color: var(--text-muted); opacity: 0.6; }
+
+.equalizer-real { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 56px; margin: 8px 0 20px; width: 100%; max-width: 340px; }
+.equalizer-real span { flex: 1; max-width: 6px; background: var(--accent); border-radius: 2px; height: 6px; transition: height 0.05s linear; }
