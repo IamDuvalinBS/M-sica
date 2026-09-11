@@ -1,101 +1,115 @@
 import { useState } from 'react';
+import { useApp } from '../context/AppContext';
 
 export default function UploadForm() {
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const { uploadSong } = useApp();
+  const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [genre, setGenre] = useState('');
+  const [file, setFile] = useState(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [sent, setSent] = useState(false);
-  const [cargando, setCargando] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!youtubeUrl || !artist) return;
+    if (!title || !artist || !file || !confirmed) return;
 
-    setCargando(true);
+    await uploadSong({ title, artist, genre, file });
 
-    try {
-      // Conexión directa a tu motor de Render en la nube
-      const respuesta = await fetch('https://onrender.com', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          urlPlaylist: youtubeUrl,
-          artista: artist,
-          contrasena: "ByDuva" // Tu clave secreta
-        })
-      });
-
-      const data = await respuesta.json();
-
-      if (respuesta.ok) {
-        alert(data.mensaje); // Te saldrá el aviso en el celular
-        setSent(true);
-        setYoutubeUrl('');
-        setArtist('');
-        setGenre('');
-      } else {
-        alert("Error: " + data.error);
-      }
-
-    } catch (error) {
-      console.error("Error conectando al motor:", error);
-      alert("No se pudo conectar con el motor de Render.");
-    } finally {
-      setCargando(false);
-      setTimeout(() => setSent(false), 4000);
-    }
+    setTitle('');
+    setArtist('');
+    setGenre('');
+    setFile(null);
+    setConfirmed(false);
+    setSent(true);
+    setTimeout(() => setSent(false), 4000);
   }
 
   return (
     <div className="upload-page">
-      <h2>Subir una canción</h2>
+      <h2>Subir una canciÃ³n</h2>
       <p className="upload-hint">
-        Pega el enlace de un video o una playlist de YouTube. El motor la procesará 
-        en segundo plano y la guardará automáticamente en tu Supabase.
+        Tu canciÃ³n entra a revisiÃ³n antes de ser pÃºblica. Solo sube mÃºsica
+        propia o con licencia para distribuir.
       </p>
 
       <form className="upload-form" onSubmit={handleSubmit}>
         <label>
-          Enlace de YouTube / Playlist
-          <input 
-            type="text" 
-            placeholder="https://www.youtube.com/..."
-            value={youtubeUrl} 
-            onChange={(e) => setYoutubeUrl(e.target.value)} 
-            required 
-          />
+          TÃ­tulo
+          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
         </label>
-        
         <label>
           Artista
-          <input 
-            type="text" 
-            placeholder="Ej: Bad Bunny"
-            value={artist} 
-            onChange={(e) => setArtist(e.target.value)} 
-            required 
-          />
+          <input value={artist} onChange={(e) => setArtist(e.target.value)} required />
         </label>
-        
         <label>
-          Género
-          <input 
-            type="text" 
-            placeholder="Ej: Reggaeton"
-            value={genre} 
-            onChange={(e) => setGenre(e.target.value)} 
+          GÃ©nero
+          <input value={genre} onChange={(e) => setGenre(e.target.value)} />
+        </label>
+        <label>
+          Archivo de audio
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={(e) => setFile(e.target.files[0])}
+            required
           />
         </label>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+          />
+          Confirmo que esta mÃºsica es mÃ­a o tengo licencia para subirla
+        </label>
 
-        {/* Mantiene el diseño exacto de tu index.css */}
-        <button type="submit" className="btn-primary" disabled={cargando}>
-          {cargando ? "Conectando al motor..." : "Iniciar Descarga"}
+        <button type="submit" className="btn-primary">
+          Enviar a revisiÃ³n
         </button>
-
-        {sent && <p className="upload-success">Canción enviada. La descarga sigue en segundo plano.</p>}
+        {sent && <p className="upload-success">CanciÃ³n enviada. Queda pendiente de revisiÃ³n.</p>}
       </form>
     </div>
   );
+}
+// ====== CÃ³digo para controlar tu formulario de subida ======
+
+const formularioMusica = document.querySelector('.upload-form');
+
+if (formularioMusica) {
+    formularioMusica.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // 1ï¸âƒ£ Capturamos lo que escribes en la pantalla de tu celular
+        // (AsegÃºrate de que en tu HTML los <input> tengan id="url-input" e id="artista-input")
+        const urlDeYoutube = document.querySelector('#url-input').value;
+        const nombreDelArtista = document.querySelector('#artista-input').value;
+
+        // 2ï¸âƒ£ Mandamos los datos a tu servidor de Render
+        try {
+            const respuesta = await fetch('https://onrender.com', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    urlPlaylist: urlDeYoutube,
+                    artista: nombreDelArtista,
+                    contrasena: "ByDuva" // ðŸ‘ˆ Pon tu clave de Render aquÃ­
+                })
+            });
+
+            const data = await respuesta.json();
+            
+            // 3ï¸âƒ£ Te muestra una alerta en el telÃ©fono avisando que ya empezÃ³ en la nube
+            alert(data.mensaje); 
+            
+            // Limpiamos el formulario para que puedas meter otro link si quieres
+            formularioMusica.reset();
+            
+        } catch (error) {
+            console.error("Error al conectar con el motor:", error);
+            alert("Hubo un error al conectar con tu motor de Render.");
+        }
+    });
 }
