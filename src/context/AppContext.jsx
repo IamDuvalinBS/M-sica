@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { saveAudioBlob, getAudioObjectUrl } from '../utils/audioStore';
 
 const AppContext = createContext(null);
-
 const ADMIN_EMAILS = ['admin@tuapp.com'];
 const STORAGE_KEY = 'proyecto-musica-state-v1';
 
@@ -22,7 +22,7 @@ function loadInitialState() {
         status: 'approved',
         uploadedBy: 'demo@tuapp.com',
         audioUrl: 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8a5b0f0b0.mp3',
-        cover: null,
+        isLocalAudio: false,
       },
     ],
     history: [],
@@ -35,8 +35,28 @@ export function AppProvider({ children }) {
   const [history, setHistory] = useState(() => loadInitialState().history || []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ songs, history }));
+    const toSave = { songs: songs.map(({ audioUrl, ...rest }) => rest), history };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   }, [songs, history]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function hydrate() {
+      const updated = await Promise.all(
+        songs.map(async (s) => {
+          if (s.isLocalAudio && !s.audioUrl) {
+            const url = await getAudioObjectUrl(s.id);
+            return { ...s, audioUrl: url };
+          }
+          return s;
+        })
+      );
+      if (!cancelled) setSongs(updated);
+    }
+    hydrate();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function recordPlay(song) {
     setHistory((prev) => {
@@ -55,16 +75,16 @@ export function AppProvider({ children }) {
     setUser(null);
   }
 
-  function uploadSong({ title, artist, genre, audioUrl }) {
+  async function uploadSong({ title, artist, genre, file }) {
+    const id = crypto.randomUUID();
+    await saveAudioBlob(id, file);
+    const audioUrl = URL.createObjectURL(file);
     const newSong = {
-      id: crypto.randomUUID(),
-      title,
-      artist,
-      genre,
+      id, title, artist, genre,
       status: 'pending',
       uploadedBy: user.email,
       audioUrl,
-      cover: null,
+      isLocalAudio: true,
     };
     setSongs((prev) => [newSong, ...prev]);
   }
@@ -78,16 +98,9 @@ export function AppProvider({ children }) {
   }
 
   const value = {
-    user,
-    isAdmin,
-    songs,
-    history,
-    recordPlay,
-    loginWithGoogle,
-    logout,
-    uploadSong,
-    approveSong,
-    rejectSong,
+    user, isAdmin, songs, history,
+    recordPlay, loginWithGoogle, logout,
+    uploadSong, approveSong, rejectSong,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
