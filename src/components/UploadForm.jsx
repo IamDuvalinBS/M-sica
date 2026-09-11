@@ -14,7 +14,7 @@ export default function UploadForm() {
     setCargando(true);
 
     try {
-      // 🚀 Mandamos los datos directo a tu servidor de Render
+      // 🚀 Envía la orden directa a tu motor de Render en la nube
       const respuesta = await fetch('https://onrender.com', {
         method: 'POST',
         headers: {
@@ -23,21 +23,21 @@ export default function UploadForm() {
         body: JSON.stringify({
           urlPlaylist: youtubeUrl,
           artista: artist,
-          contrasena: "ByDuva" // Tu clave secreta
+          contrasena: "ByDuva" // Tu clave del motor
         })
       });
 
       const data = await respuesta.json();
 
       if (respuesta.ok) {
-        alert(data.mensaje); // Te avisa: "Sincronización iniciada..."
+        alert(data.mensaje); // "Sincronización iniciada..."
         setSent(true);
-        // Limpiamos los cuadros de texto del celular
+        // Limpiamos los inputs en tu celular
         setYoutubeUrl('');
         setArtist('');
         setGenre('');
       } else {
-        alert("Error del motor: " + data.error);
+        alert("Aviso del servidor: " + data.error);
       }
 
     } catch (error) {
@@ -51,10 +51,10 @@ export default function UploadForm() {
 
   return (
     <div className="upload-page">
-      <h2>Descargar Música desde YouTube</h2>
+      <h2>Descargar Música</h2>
       <p className="upload-hint">
-        Pega el enlace de un video, álbum o playlist. El motor lo procesará en la nube 
-        y lo guardará automáticamente en tu cuenta de Supabase.
+        Pega el enlace de un video o una playlist completa de YouTube. El motor la procesará 
+        en segundo plano y la guardará en tu cuenta de Supabase.
       </p>
 
       <form className="upload-form" onSubmit={handleSubmit}>
@@ -92,7 +92,7 @@ export default function UploadForm() {
           {cargando ? "Conectando al motor..." : "Iniciar Descarga Automática"}
         </button>
 
-        {sent && <p className="upload-success">¡Orden enviada! La música se está descargando en segundo plano.</p>}
+        {sent && <p className="upload-success">¡Orden enviada! Puedes cerrar la pestaña, la descarga sigue en segundo plano.</p>}
       </form>
     </div>
   );
