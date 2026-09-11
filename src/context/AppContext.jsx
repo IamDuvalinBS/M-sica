@@ -1,62 +1,46 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { saveAudioBlob, getAudioObjectUrl, deleteAudioBlob } from '../utils/audioStore';
+import { supabase } from '../supabaseClient';
 
 const AppContext = createContext(null);
 const ADMIN_EMAILS = ['admin@tuapp.com'];
-const STORAGE_KEY = 'proyecto-musica-state-v1';
 
-function loadInitialState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.warn('No se pudo leer el estado guardado', e);
-  }
+// Traduce una fila de la tabla "canciones" (nombres en español)
+// al formato que usa el resto de tu app (nombres en inglés)
+function rowToSong(row) {
   return {
-    songs: [
-      {
-        id: 'demo-1',
-        title: 'Amanecer en la Ciudad',
-        artist: 'Luna Reyes',
-        genre: 'Indie',
-        status: 'approved',
-        uploadedBy: 'demo@tuapp.com',
-        audioUrl: 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8a5b0f0b0.mp3',
-        isLocalAudio: false,
-      },
-    ],
-    history: [],
+    id: row.id,
+    title: row.titulo,
+    artist: row.artista,
+    genre: row.genero,
+    status:
+      row.estado === 'pendiente' ? 'pending' :
+      row.estado === 'aprobada' ? 'approved' : 'rejected',
+    uploadedBy: row.uploaded_by,
+    audioUrl: row.url_archivo,
   };
 }
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [songs, setSongs] = useState(() => loadInitialState().songs);
-  const [history, setHistory] = useState(() => loadInitialState().history || []);
+  const [songs, setSongs] = useState([]);
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    const toSave = { songs: songs.map(({ audioUrl, ...rest }) => rest), history };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-  }, [songs, history]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function hydrate() {
-      const updated = await Promise.all(
-        songs.map(async (s) => {
-          if (s.isLocalAudio && !s.audioUrl) {
-            const url = await getAudioObjectUrl(s.id);
-            return { ...s, audioUrl: url };
-          }
-          return s;
-        })
-      );
-      if (!cancelled) setSongs(updated);
-    }
-    hydrate();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchSongs();
   }, []);
+
+  async function fetchSongs() {
+    const { data, error } = await supabase
+      .from('canciones')
+      .select('*')
+      .order('fecha_subida', { ascending: false });
+
+    if (error) {
+      console.error('Error cargando canciones:', error);
+      return;
+    }
+    setSongs(data.map(rowToSong));
+  }
 
   function recordPlay(song) {
     setHistory((prev) => {
@@ -76,30 +60,60 @@ export function AppProvider({ children }) {
   }
 
   async function uploadSong({ title, artist, genre, file }) {
-    const id = crypto.randomUUID();
-    await saveAudioBlob(id, file);
-    const audioUrl = URL.createObjectURL(file);
-    const newSong = {
-      id, title, artist, genre,
-      status: 'pending',
-      uploadedBy: user.email,
-      audioUrl,
-      isLocalAudio: true,
-    };
-    setSongs((prev) => [newSong, ...prev]);
+    // 1. Nombre único para evitar choques entre archivos
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+
+    // 2. Sube el audio al bucket
+    const { error: uploadError } = await supabase.storage
+      .from('audios')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error('Error subiendo archivo:', uploadError);
+      throw uploadError;
+    }
+
+    // 3. Obtiene la URL pública del archivo
+    const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName);
+
+    // 4. Guarda el registro en la tabla, pendiente de revisión
+    const { data, error: insertError } = await supabase
+      .from('canciones')
+      .insert([{
+        titulo: title,
+        artista: artist,
+        genero: genre,
+        url_archivo: urlData.publicUrl,
+        estado: 'pendiente',
+        uploaded_by: user ? user.email : 'anonimo',
+      }])
+      .select();
+
+    if (insertError) {
+      console.error('Error guardando canción:', insertError);
+      throw insertError;
+    }
+
+    setSongs((prev) => [rowToSong(data[0]), ...prev]);
   }
 
-  function approveSong(id) {
+  async function approveSong(id) {
+    const { error } = await supabase.from('canciones').update({ estado: 'aprobada' }).eq('id', id);
+    if (error) { console.error(error); return; }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'approved' } : s)));
   }
 
-  function rejectSong(id) {
+  async function rejectSong(id) {
+    const { error } = await supabase.from('canciones').update({ estado: 'rechazada' }).eq('id', id);
+    if (error) { console.error(error); return; }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'rejected' } : s)));
   }
 
-  function deleteSong(id) {
+  async function deleteSong(id) {
+    const { error } = await supabase.from('canciones').delete().eq('id', id);
+    if (error) { console.error(error); return; }
     setSongs((prev) => prev.filter((s) => s.id !== id));
-    deleteAudioBlob(id).catch(() => {});
   }
 
   const value = {
@@ -115,4 +129,4 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp debe usarse dentro de <AppProvider>');
   return ctx;
-             }
+    }
