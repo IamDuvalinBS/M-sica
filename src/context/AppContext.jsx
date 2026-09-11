@@ -2,11 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 const AppContext = createContext(null);
 
-// Cuenta que actúa como dueño/admin de la app.
-// En producción esto vendría del backend (ej. un campo "role" en tu base de datos),
-// no de una lista fija en el código.
 const ADMIN_EMAILS = ['admin@tuapp.com'];
-
 const STORAGE_KEY = 'proyecto-musica-state-v1';
 
 function loadInitialState() {
@@ -29,16 +25,25 @@ function loadInitialState() {
         cover: null,
       },
     ],
+    history: [],
   };
 }
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [songs, setSongs] = useState(() => loadInitialState().songs);
+  const [history, setHistory] = useState(() => loadInitialState().history || []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ songs }));
-  }, [songs]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ songs, history }));
+  }, [songs, history]);
+
+  function recordPlay(song) {
+    setHistory((prev) => {
+      const withoutDup = prev.filter((h) => h.songId !== song.id);
+      return [{ songId: song.id, title: song.title, artist: song.artist, playedAt: Date.now() }, ...withoutDup].slice(0, 30);
+    });
+  }
 
   const isAdmin = user ? ADMIN_EMAILS.includes(user.email) : false;
 
@@ -65,21 +70,19 @@ export function AppProvider({ children }) {
   }
 
   function approveSong(id) {
-    setSongs((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'approved' } : s))
-    );
+    setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'approved' } : s)));
   }
 
   function rejectSong(id) {
-    setSongs((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'rejected' } : s))
-    );
+    setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'rejected' } : s)));
   }
 
   const value = {
     user,
     isAdmin,
     songs,
+    history,
+    recordPlay,
     loginWithGoogle,
     logout,
     uploadSong,
