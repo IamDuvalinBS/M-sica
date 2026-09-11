@@ -18,6 +18,7 @@ export default function Player({ song }) {
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
   const bassRef = useRef(null);
+  const subBassRef = useRef(null);
   const midRef = useRef(null);
   const trebleRef = useRef(null);
   const rafRef = useRef(null);
@@ -60,6 +61,11 @@ export default function Player({ song }) {
     const source = ctx.createMediaElementSource(audioRef.current);
 
     const bass = ctx.createBiquadFilter();
+     const subBass = ctx.createBiquadFilter();
+    subBass.type = 'lowshelf';
+    subBass.frequency.value = 60;
+
+    const bass = ctx.createBiquadFilter();
     bass.type = 'lowshelf';
     bass.frequency.value = 200;
 
@@ -72,18 +78,28 @@ export default function Player({ song }) {
     treble.type = 'highshelf';
     treble.frequency.value = 4000;
 
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -12;
+    compressor.knee.value = 20;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 64;
 
-    source.connect(bass);
+    source.connect(subBass);
+    subBass.connect(bass);
     bass.connect(mid);
     mid.connect(treble);
-    treble.connect(analyser);
+    treble.connect(compressor);
+    compressor.connect(analyser);
     analyser.connect(ctx.destination);
 
     audioCtxRef.current = ctx;
     analyserRef.current = analyser;
     bassRef.current = bass;
+    subBassRef.current = subBass;
     midRef.current = mid;
     trebleRef.current = treble;
   }
@@ -91,8 +107,28 @@ export default function Player({ song }) {
   function handleEqChange(band, value) {
     const val = Number(value);
     setEq((prev) => ({ ...prev, [band]: val }));
-    const node = band === 'bass' ? bassRef.current : band === 'mid' ? midRef.current : trebleRef.current;
-    if (node) node.gain.value = val;
+    if (band === 'bass') {
+      if (bassRef.current) bassRef.current.gain.value = val;
+      if (subBassRef.current) subBassRef.current.gain.value = val * 1.2;
+    } else {
+      const node = band === 'mid' ? midRef.current : trebleRef.current;
+      if (node) node.gain.value = val;
+    }
+  }
+
+  function applyPreset(preset) {
+    const presets = {
+      flat: { bass: 0, mid: 0, treble: 0 },
+      bassBoost: { bass: 14, mid: -2, treble: 2 },
+      vocals: { bass: -3, mid: 6, treble: 3 },
+      treble: { bass: -2, mid: 0, treble: 9 },
+    };
+    const values = presets[preset];
+    setEq(values);
+    if (bassRef.current) bassRef.current.gain.value = values.bass;
+    if (subBassRef.current) subBassRef.current.gain.value = values.bass * 1.2;
+    if (midRef.current) midRef.current.gain.value = values.mid;
+    if (trebleRef.current) trebleRef.current.gain.value = values.treble;
   }
 
   function drawFrame() {
@@ -179,8 +215,14 @@ export default function Player({ song }) {
             </div>
           )}
 
-          {showEq && (
+           {showEq && (
             <div className="eq-panel">
+              <div className="eq-presets">
+                <button onClick={() => applyPreset('flat')}>Plano</button>
+                <button onClick={() => applyPreset('bassBoost')}>Bass Boost 🔥</button>
+                <button onClick={() => applyPreset('vocals')}>Voces</button>
+                <button onClick={() => applyPreset('treble')}>Agudos</button>
+              </div>
               {[['bass', 'Graves'], ['mid', 'Medios'], ['treble', 'Agudos']].map(([key, label]) => (
                 <div key={key} className="eq-row">
                   <span className="eq-label">{label}</span>
