@@ -181,3 +181,14 @@ h1, h2 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0 0 12px; }
 
 .equalizer-real { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 56px; margin: 8px 0 20px; width: 100%; max-width: 340px; }
 .equalizer-real span { flex: 1; max-width: 6px; background: var(--accent); border-radius: 2px; height: 6px; transition: height 0.05s linear; }
+
+.full-player { background-color: var(--bg) !important; background-image: none !important; }
+.full-player-topbar-actions { display: flex; gap: 8px; }
+
+.eq-panel { width: 100%; max-width: 340px; background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 14px; }
+.eq-row { display: flex; align-items: center; gap: 10px; }
+.eq-label { width: 60px; font-size: 0.8rem; color: var(--text-muted); }
+.eq-row input[type="range"] { flex: 1; }
+.eq-value { width: 46px; font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+
+.btn-delete { border: none; border-radius: var(--radius); padding: 10px 14px; font-size: 0.85rem; background: transparent; color: var(--danger); border: 1px solid var(--danger); }
