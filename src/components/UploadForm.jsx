@@ -10,12 +10,11 @@ export default function UploadForm() {
   const [confirmed, setConfirmed] = useState(false);
   const [sent, setSent] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!title || !artist || !file || !confirmed) return;
 
-    const audioUrl = URL.createObjectURL(file);
-    uploadSong({ title, artist, genre, audioUrl });
+    await uploadSong({ title, artist, genre, file });
 
     setTitle('');
     setArtist('');
