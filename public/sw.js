@@ -8,6 +8,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Estrategia simple: intenta la red primero, cae al cache si no hay internet.
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
