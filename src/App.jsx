@@ -7,6 +7,8 @@ import UploadForm from './components/UploadForm';
 import AdminReviewQueue from './components/AdminReviewQueue';
 import PublicFeed from './components/PublicFeed';
 import HistoryView from './components/HistoryView';
+import StatsView from './components/StatsView';
+import SettingsView from './components/SettingsView';
 import Player from './components/Player';
 import './styles/index.css';
 
