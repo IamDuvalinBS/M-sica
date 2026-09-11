@@ -1,7 +1,9 @@
+import { songGradient } from '../utils/colors';
+
 export default function SongCard({ song, onPlay }) {
   return (
     <button className="song-card" onClick={onPlay}>
-      <div className="song-cover" aria-hidden="true">
+      <div className="song-cover" style={{ background: songGradient(song.id) }} aria-hidden="true">
         {song.title.charAt(0).toUpperCase()}
       </div>
       <div className="song-info">
